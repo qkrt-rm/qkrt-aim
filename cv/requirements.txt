@@ -1,0 +1,5 @@
+onnxruntime-gpu
+opencv-python
+numpy
+pyserial
+line-profiler # This one is technically non-critical, but it's super useful!
