@@ -26,6 +26,10 @@ from pose_estimator.TargetPositionEstimator import TargetPositionEstimator
 from rules import CenterTargetRule, TargetSelector
 from util import FrameRateTracker, Point3D, putTextOnImage
 
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
 # Enable additional print info
 # This does slow down main loop, do not enable in deployment
 DEBUG = True
@@ -44,9 +48,25 @@ def sendRobotPosition(position: Point3D):
     message = RobotPositionMessage(position)
     serial.write(message.createMessage())
 
+class NavToMCB(Node):
+    def __init__(self):
+        super().__init__('minimal_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'topic',
+            self.listener_callback,
+            10)
+        self.subscription  # prevent unused variable warning
+
+    def listener_callback(self, msg):
+        self.get_logger().info('I heard: "%s"' % msg.data)
 
 @profile
 def main():
+    rclpy.init(None)
+    minimal_subscriber = NavToMCB()
+    rclpy.spin(minimal_subscriber)    
+
     while True:
         frame = camera.getFrame()
         targets = detector.processInput(frame)
