@@ -48,8 +48,8 @@ def sendRobotPosition(position: Point3D):
     message = RobotPositionMessage(position)
     serial.write(message.createMessage())
 
-def sendVelocityCommand(velocity: Point3D):
-    message = RobotPositionMessage(velocity)
+def sendVelocityCommand(command: Point3D):
+    message = RobotPositionMessage(command)
     serial.write(message.createMessage())
 
 class NavSubscriber(Node):
