@@ -53,3 +53,15 @@ class Serial:
             data (bytes): The binary data to be transmitted.
         """
         self.port.write(data)
+
+    def read(self, size: int):
+        """
+        Reads binary data over the serial port.
+
+        Args:
+            size (int): Number of bytes to read.
+                size – 
+        Returns:
+            Bytes read from the port.
+        """
+        return self.port.read(size)
