@@ -28,7 +28,7 @@ from util import FrameRateTracker, Point3D, putTextOnImage
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from geometry_msgs.msg import Twist
 
 # Enable additional print info
 # This does slow down main loop, do not enable in deployment
@@ -48,24 +48,29 @@ def sendRobotPosition(position: Point3D):
     message = RobotPositionMessage(position)
     serial.write(message.createMessage())
 
-class NavToMCB(Node):
+def sendVelocityCommand(velocity: Point3D):
+    message = RobotPositionMessage(velocity)
+    serial.write(message.createMessage())
+
+class NavSubscriber(Node):
     def __init__(self):
-        super().__init__('minimal_subscriber')
+        super().__init__('navsubscriber')
         self.subscription = self.create_subscription(
-            String,
-            'topic',
+            Twist,
+            'cmd_vel',
             self.listener_callback,
             10)
         self.subscription  # prevent unused variable warning
 
     def listener_callback(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.data)
+        self.get_logger().info('I heard: "%s"' % msg.linear.x)
+        self.cmd = Point3D(msg.linear.x, msg.linear.y, msg.angular.z)
 
 @profile
 def main():
     rclpy.init(None)
-    minimal_subscriber = NavToMCB()
-    rclpy.spin(minimal_subscriber)    
+    nav_messenger = NavSubscriber()
+    rclpy.spin(nav_messenger)    
 
     while True:
         frame = camera.getFrame()
@@ -77,6 +82,8 @@ def main():
             best_target = target_selector.getBestTarget(targets)
             _, target_rotation, target_position = pose_estimator.estimatePosition(best_target)
             sendRobotPosition(target_position)
+
+        sendVelocityCommand(nav_messenger.cmd)
 
         if DEBUG:
             tracker.update()
