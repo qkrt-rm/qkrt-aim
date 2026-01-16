@@ -135,3 +135,34 @@ class RobotPositionMessage(DJIMessage):
             bytes: Encoded position data as 3 floats (x, y, z) in little-endian format.
         """
         return struct.pack("<fff", self.position.x, self.position.y, self.position.z)
+
+class NavMessage(DJIMessage):
+    """
+    Represents a message that communicates the velocity command computed from AutoNav.
+    The command is encoded as three floats (Vx, Vy, w) in little-endian format.
+    """
+
+    def __init__(self, cmd: Point3D):
+        """
+        Initializes the NavMessage with the given commanded velocity.
+
+        Args:
+            cmd (Point3D): The linear velocities Vx, Vy, and angular velocity w.
+        """
+        self.cmd = cmd
+
+    def getID(self) -> int:
+        """
+        Returns the unique message ID for NavMessage.
+        ID: 0x01
+        """
+        return 0x02
+
+    def getPayload(self) -> bytes:
+        """
+        Constructs the payload containing the velocity command.
+
+        Returns:
+            bytes: Encoded velocity command data as 3 floats (x, y, z) in little-endian format.
+        """
+        return struct.pack("<fff", self.cmd.x, self.cmd.y, self.cmd.z)
