@@ -1,1 +1,7 @@
-/aim_env
+aim_env/
+
+*.so
+*.dll
+*.dylib
+
+onnxruntime/
