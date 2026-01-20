@@ -34,7 +34,7 @@ detector = HUSTDetector("detector/models/HUST_model.onnx")
 camera = Camera(OV9782_CONFIG)
 pose_estimator = TargetPositionEstimator("example_camera_calibration.json")
 target_selector = TargetSelector([CenterTargetRule(camera.width, camera.height)])
-serial = Serial("/dev/ttyTHS0", 1_000_000)
+serial = Serial("/dev/ttyTHS1", 115200)
 
 if DEBUG:
     tracker = FrameRateTracker(1.0)
