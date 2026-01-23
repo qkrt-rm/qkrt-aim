@@ -56,10 +56,10 @@ class CameraConfig:
 # Camera configurations
 OV9782_CONFIG = CameraConfig(
     codec="MJPG",
-    width=1280,
-    height=800,
+    width=1920,
+    height=1080,
     fps=100,
-    auto_exposure=0,
+    auto_exposure=3,
     exposure=20,
     saturation=100,
     auto_white_balance=1,
@@ -67,33 +67,68 @@ OV9782_CONFIG = CameraConfig(
 )
 
 
-class Camera(cv2.VideoCapture):
-    """
-    A wrapper for a generic camera using OpenCV's VideoCapture.
+#class Camera(cv2.VideoCapture):
+#    """
+#    A wrapper for a generic camera using OpenCV's VideoCapture.
+#
+#    This class initializes a camera, applies the provided configuration, and provides utilities
+#    to retrieve frames and properties like width and height.
+#    """
+#
+#    def __init__(self, config: CameraConfig, port: int = 4):
+#        super().__init__(port)
+#
+#        config.applyConfig(self)
+#
+#        print(f"Setup camera on port {port} with following settings: {config}")
+#        print(f"Actual width x height: {self.width} x {self.height}")
+#        print(f"Actual fps {self.get(cv2.CAP_PROP_FPS)}")
+#        print()
+#
+#    @profile
+#    def getFrame(self):
+#        self.grab()
+#        return self.retrieve()[1]
+#
+#    @property
+#    def width(self):
+#        return int(self.get(cv2.CAP_PROP_FRAME_WIDTH))
+#
+#    @property
+#    def height(self):
+#        return int(self.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    This class initializes a camera, applies the provided configuration, and provides utilities
-    to retrieve frames and properties like width and height.
-    """
+class RealsenseCamera:
+    def __init__(self, rgb_port=4, depth_port=2):
+        self.rgb_cap = cv2.VideoCapture(int(rgb_port), cv2.CAP_V4L2)
+        self.depth_cap = cv2.VideoCapture(int(depth_port), cv2.CAP_V4L2)
 
-    def __init__(self, config: CameraConfig, port: int = 0):
-        super().__init__(port)
-
-        config.applyConfig(self)
-
-        print(f"Setup camera on port {port} with following settings: {config}")
-        print(f"Actual width x height: {self.width} x {self.height}")
-        print(f"Actual fps {self.get(cv2.CAP_PROP_FPS)}")
-        print()
+        if not self.rgb_cap.isOpened():
+            raise RuntimeError(f"Failed to open RGB camera on port {rgb_port}")
+        if not self.depth_cap.isOpened():
+            raise RuntimeError(f"Failed to open Depth camera on port {depth_port}")
 
     @profile
     def getFrame(self):
-        self.grab()
-        return self.retrieve()[1]
+        """Return the RGB frame only, similar to the old Camera interface."""
+        ret_rgb, rgb = self.rgb_cap.read()
+        if not ret_rgb:
+            return None
+        return rgb
+
+    def getRGBDFrame(self):
+        """Return a tuple (rgb_frame, depth_frame) if you need both."""
+        ret_rgb, rgb = self.rgb_cap.read()
+        ret_depth, depth = self.depth_cap.read()
+        if not ret_rgb or not ret_depth:
+            return None, None
+        return rgb, depth
 
     @property
     def width(self):
-        return int(self.get(cv2.CAP_PROP_FRAME_WIDTH))
+        return int(self.rgb_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
     @property
     def height(self):
-        return int(self.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        return int(self.rgb_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+

@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import cv2
 from line_profiler import profile
 
-from camera.Camera import OV9782_CONFIG, Camera
+from camera.Camera import OV9782_CONFIG, RealsenseCamera
 from communication import RobotPositionMessage, Serial
 from detector import HUSTDetector
 from pose_estimator.TargetPositionEstimator import TargetPositionEstimator
@@ -31,7 +31,7 @@ from util import FrameRateTracker, Point3D, putTextOnImage
 DEBUG = True
 
 detector = HUSTDetector("detector/models/HUST_model.onnx")
-camera = Camera(OV9782_CONFIG)
+camera = RealsenseCamera()
 pose_estimator = TargetPositionEstimator("example_camera_calibration.json")
 target_selector = TargetSelector([CenterTargetRule(camera.width, camera.height)])
 serial = Serial("/dev/ttyTHS1", 115200)
