@@ -98,31 +98,77 @@ OV9782_CONFIG = CameraConfig(
 #    def height(self):
 #        return int(self.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+import cv2
+from line_profiler import profile
+import numpy as np
+
 class RealsenseCamera:
-    def __init__(self, rgb_port=4, depth_port=2):
+    """
+    Realsense-like camera using OpenCV VideoCapture for RGB + depth.
+    Depth is an 8-bit approximation; real distances require pyrealsense2.
+    """
+
+    def __init__(self, rgb_port=4, depth_port=2, max_depth_mm=10000):
+        """
+        Initialize RGB and depth streams.
+
+        :param rgb_port: OpenCV index for RGB camera
+        :param depth_port: OpenCV index for depth camera
+        :param max_depth_mm: Maximum depth distance for scaling 8-bit depth
+        """
         self.rgb_cap = cv2.VideoCapture(int(rgb_port), cv2.CAP_V4L2)
         self.depth_cap = cv2.VideoCapture(int(depth_port), cv2.CAP_V4L2)
+        self.max_depth_mm = max_depth_mm
 
         if not self.rgb_cap.isOpened():
             raise RuntimeError(f"Failed to open RGB camera on port {rgb_port}")
         if not self.depth_cap.isOpened():
             raise RuntimeError(f"Failed to open Depth camera on port {depth_port}")
 
+        print(f"RealsenseCamera initialized. RGB port: {rgb_port}, Depth port: {depth_port}")
+
     @profile
     def getFrame(self):
-        """Return the RGB frame only, similar to the old Camera interface."""
+        """
+        Return RGB frame only (like old Camera interface).
+        """
         ret_rgb, rgb = self.rgb_cap.read()
         if not ret_rgb:
             return None
         return rgb
 
     def getRGBDFrame(self):
-        """Return a tuple (rgb_frame, depth_frame) if you need both."""
+        """
+        Return a tuple (rgb_frame, depth_frame).
+        Depth frame is 8-bit grayscale approximation.
+        """
         ret_rgb, rgb = self.rgb_cap.read()
         ret_depth, depth = self.depth_cap.read()
         if not ret_rgb or not ret_depth:
             return None, None
         return rgb, depth
+
+    def getDistanceAt(self, x, y, depth_frame=None):
+        """
+        Return approximate distance (in mm) at pixel (x, y).
+        If depth_frame is not provided, reads a new depth frame.
+
+        :param x: pixel column
+        :param y: pixel row
+        :param depth_frame: optional 8-bit depth frame
+        :return: distance in mm (float)
+        """
+        if depth_frame is None:
+            _, depth_frame = self.getRGBDFrame()
+            if depth_frame is None:
+                return None
+
+        h, w = depth_frame.shape[:2]
+        x = np.clip(x, 0, w - 1)
+        y = np.clip(y, 0, h - 1)
+        pixel_value = depth_frame[y, x]  # 0-255
+        distance_mm = (pixel_value / 255.0) * self.max_depth_mm
+        return distance_mm
 
     @property
     def width(self):
@@ -131,4 +177,3 @@ class RealsenseCamera:
     @property
     def height(self):
         return int(self.rgb_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
