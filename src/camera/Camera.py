@@ -56,9 +56,9 @@ class CameraConfig:
 # Camera configurations
 OV9782_CONFIG = CameraConfig(
     codec="MJPG",
-    width=1920,
-    height=1080,
-    fps=100,
+    width=640,
+    height=480,
+    fps=90,
     auto_exposure=3,
     exposure=20,
     saturation=100,
@@ -108,7 +108,7 @@ class RealsenseCamera:
     Depth is an 8-bit approximation; real distances require pyrealsense2.
     """
 
-    def __init__(self, rgb_port=4, depth_port=2, max_depth_mm=10000):
+    def __init__(self, rgb_port=4, depth_port=0, max_depth_mm=10000):
         """
         Initialize RGB and depth streams.
 
@@ -118,6 +118,8 @@ class RealsenseCamera:
         """
         self.rgb_cap = cv2.VideoCapture(int(rgb_port), cv2.CAP_V4L2)
         self.depth_cap = cv2.VideoCapture(int(depth_port), cv2.CAP_V4L2)
+        self.depth_cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)  # keep raw 16-bit
+
         self.max_depth_mm = max_depth_mm
 
         if not self.rgb_cap.isOpened():
@@ -143,21 +145,21 @@ class RealsenseCamera:
         Depth frame is 8-bit grayscale approximation.
         """
         ret_rgb, rgb = self.rgb_cap.read()
+        ret_rgb, rgb = self.rgb_cap.read()
         ret_depth, depth = self.depth_cap.read()
+        if not ret_rgb or not ret_depth:
+            return None, None
+
+        # Convert depth for display (8-bit)
+        depth_vis = cv2.convertScaleAbs(depth, alpha=255.0/self.max_depth_mm)
+
+        return rgb, depth_vis, depth  # keep raw depth for getDistanceAt()
+
         if not ret_rgb or not ret_depth:
             return None, None
         return rgb, depth
 
     def getDistanceAt(self, x, y, depth_frame=None):
-        """
-        Return approximate distance (in mm) at pixel (x, y).
-        If depth_frame is not provided, reads a new depth frame.
-
-        :param x: pixel column
-        :param y: pixel row
-        :param depth_frame: optional 8-bit depth frame
-        :return: distance in mm (float)
-        """
         if depth_frame is None:
             _, depth_frame = self.getRGBDFrame()
             if depth_frame is None:
@@ -166,9 +168,22 @@ class RealsenseCamera:
         h, w = depth_frame.shape[:2]
         x = np.clip(x, 0, w - 1)
         y = np.clip(y, 0, h - 1)
-        pixel_value = depth_frame[y, x]  # 0-255
-        distance_mm = (pixel_value / 255.0) * self.max_depth_mm
-        return distance_mm
+
+        pixel = depth_frame[y, x]
+
+        # 🔑 If depth frame is 3-channel, take one channel
+        if isinstance(pixel, np.ndarray):
+            pixel_value = int(pixel[0])   # or pixel.mean()
+        else:
+            pixel_value = int(pixel)
+
+        if depth_frame.dtype == np.uint16:
+            distance_mm = (pixel_value / 65535.0) * self.max_depth_mm
+        else:
+            distance_mm = (pixel_value / 255.0) * self.max_depth_mm
+
+        return float(distance_mm)
+
 
     @property
     def width(self):

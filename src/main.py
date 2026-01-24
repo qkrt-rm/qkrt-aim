@@ -30,7 +30,7 @@ DEBUG = True
 
 # Initialize components
 detector = HUSTDetector("detector/models/HUST_model.onnx")
-camera = RealsenseCamera(rgb_port=4, depth_port=2, max_depth_mm=10000)
+camera = RealsenseCamera(rgb_port=4, depth_port=0, max_depth_mm=10000)
 pose_estimator = TargetPositionEstimator("example_camera_calibration.json")
 target_selector = TargetSelector([CenterTargetRule(camera.width, camera.height)])
 serial = Serial("/dev/ttyTHS1", 115200)
@@ -60,9 +60,9 @@ def main():
         if has_any_target:
             best_target = target_selector.getBestTarget(targets)
             _, target_rotation, target_position = pose_estimator.estimatePosition(best_target)
+            
             sendRobotPosition(target_position)
 
-        # Debug display & info
         if DEBUG:
             tracker.update()
 
@@ -73,20 +73,72 @@ def main():
                 print("Best target:", best_target)
                 print("Target position:", target_position)
 
-            # Show approximate distance at center
-            if depth_frame is not None:
-                h, w = depth_frame.shape[:2]
-                center_distance_mm = camera.getDistanceAt(w//2, h//2, depth_frame)
-                cv2.putText(frame, f"Center Distance: {center_distance_mm} mm",
-                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            # Draw targets (in-place)
+            putTextOnImage(frame, targets)
 
-            # Draw targets
-            frame = putTextOnImage(frame, targets)
-
-            # Display frame
+                        # Show RGB last
             cv2.imshow("Frame", frame)
+
+            # Distance text
+            if depth_frame is not None:
+                # --- Convert depth to grayscale ---
+                if len(depth_frame.shape) == 3:
+                    depth_gray = cv2.cvtColor(depth_frame, cv2.COLOR_BGR2GRAY)
+                else:
+                    depth_gray = depth_frame.copy()
+
+                # --- Normalize for display ---
+                depth_vis = cv2.normalize(
+                    depth_gray,
+                    None,
+                    0,
+                    255,
+                    cv2.NORM_MINMAX
+                ).astype("uint8")
+
+                h, w = depth_vis.shape
+                cx, cy = w // 2, h // 2
+
+                # --- Get distance at center ---
+                center_distance_mm = camera.getDistanceAt(cx, cy, depth_gray)
+
+                # --- Draw crosshair ---
+                cv2.drawMarker(
+                    depth_vis,
+                    (cx, cy),
+                    255,
+                    markerType=cv2.MARKER_CROSS,
+                    markerSize=20,
+                    thickness=2
+                )
+
+                # --- Draw distance text ON DEPTH FRAME ---
+                if center_distance_mm is not None:
+                    cv2.putText(
+                        depth_vis,
+                        f"{float(center_distance_mm):.1f} mm",
+                        (cx - 80, cy - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        255,
+                        2
+                    )
+
+            
+            cv2.imshow("Depth Frame", depth_vis)
+
+
+
+            #cv2.imshow("Depth Frame", depth_gray)
+
+
+
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
+
+
+
+
 
     # Cleanup
     camera.release()
