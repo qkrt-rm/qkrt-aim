@@ -55,15 +55,15 @@ class CameraConfig:
 
 # Camera configurations
 OV9782_CONFIG = CameraConfig(
-    codec="MJPG",
+    codec="YUYV",
     width=1280,
-    height=800,
-    fps=100,
-    auto_exposure=0,
-    exposure=20,
-    saturation=100,
+    height=720,
+    fps=30,
+    auto_exposure=1,
+    exposure=156,
+    saturation=64,
     auto_white_balance=1,
-    white_balance=0,
+    white_balance=4600,
 )
 
 
@@ -75,15 +75,22 @@ class Camera(cv2.VideoCapture):
     to retrieve frames and properties like width and height.
     """
 
-    def __init__(self, config: CameraConfig, port: int = 0):
-        super().__init__(port)
+    def __init__(self, config: CameraConfig, port: int = 4):
+        super().__init__(port, cv2.CAP_V4L2)
+
+        if not self.isOpened():
+            print(f"CRITICAL: Could not open RealSense on port {port}")
+            return
 
         config.applyConfig(self)
 
-        print(f"Setup camera on port {port} with following settings: {config}")
-        print(f"Actual width x height: {self.width} x {self.height}")
-        print(f"Actual fps {self.get(cv2.CAP_PROP_FPS)}")
-        print()
+        print(f"Connected to RealSense on port {port}")
+        print(f"Streaming at: {self.width}x{self.height} @ {self.get(cv2.CAP_PROP_FPS)} FPS")
+
+        # print(f"Setup camera on port {port} with following settings: {config}")
+        # print(f"Actual width x height: {self.width} x {self.height}")
+        # print(f"Actual fps {self.get(cv2.CAP_PROP_FPS)}")
+        # print()
 
     @profile
     def getFrame(self):

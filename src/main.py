@@ -49,6 +49,10 @@ def sendRobotPosition(position: Point3D):
 def main():
     while True:
         frame = camera.getFrame()
+
+        if frame is None:
+            continue
+        
         targets = detector.processInput(frame)
 
         has_any_target = len(targets) > 0
