@@ -54,16 +54,13 @@ class HUSTDetector(Detector):
 
     # Format input to target expected model input of (1, 3, 416, 416)
     def formatInput(self, img: MatLike):
+        h, w = img.shape[:2]
         # Chop off the sides to make it square
         x_cutoff = 0
-        if img.shape[1] != img.shape[0]:
-            x_cutoff = img.shape[1] - img.shape[0]
-            x_cutoff = x_cutoff // 2
-            img = img[:, x_cutoff : x_cutoff + img.shape[0]]
 
         # Resize the image to the input size of the model
-        scalar_h = img.shape[0] / self.INPUT_SIZE
-        scalar_w = img.shape[1] / self.INPUT_SIZE
+        scalar_h = h / self.INPUT_SIZE
+        scalar_w = w / self.INPUT_SIZE
 
         # Image shape is resized to (416, 416, 3)
         img = cv2.resize(img, (self.INPUT_SIZE, self.INPUT_SIZE))
