@@ -1,0 +1,8 @@
+aim_env/
+
+*.so
+*.dll
+*.dylib
+*.whl
+
+onnxruntime/
