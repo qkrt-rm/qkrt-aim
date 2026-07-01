@@ -118,6 +118,7 @@ class HUSTDetector(Detector):
                 self.tag_to_word[tag],
                 confidence,
             )
+            target.color_id = int(color)
             targets.append(target)
 
         # Sort the targets by confidence

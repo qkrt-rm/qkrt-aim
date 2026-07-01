@@ -39,11 +39,15 @@ serial = Serial("/dev/ttyTHS0", 1_000_000)
 if DEBUG:
     tracker = FrameRateTracker(1.0)
 
+# Nav function
+# def sendRobotPosition(position: Point3D):
+#     message = RobotPositionMessage(position)
+#     serial.write(message.createMessage())
 
-def sendRobotPosition(position: Point3D):
-    message = RobotPositionMessage(position)
+# Aim based function
+def sendRobotPosition(position: Point3D, color_id: int):
+    message = RobotPositionMessage(position, color_id)
     serial.write(message.createMessage())
-
 
 @profile
 def main():
@@ -56,7 +60,8 @@ def main():
         if has_any_target:
             best_target = target_selector.getBestTarget(targets)
             _, target_rotation, target_position = pose_estimator.estimatePosition(best_target)
-            sendRobotPosition(target_position)
+            color_id = getattr(best_target, 'color_id', 0)
+            sendRobotPosition(target_position, color_id)
 
         if DEBUG:
             tracker.update()

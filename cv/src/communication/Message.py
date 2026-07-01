@@ -111,7 +111,7 @@ class RobotPositionMessage(DJIMessage):
     The position is encoded as three floats (x, y, z) in little-endian format.
     """
 
-    def __init__(self, position: Point3D):
+    def __init__(self, position: Point3D, color_id: int):
         """
         Initializes the RobotPositionMessage with the given position.
 
@@ -119,6 +119,7 @@ class RobotPositionMessage(DJIMessage):
             position (Point3D): The 3D coordinates of the robot.
         """
         self.position = position
+        self.color_id = color_id
 
     def getID(self) -> int:
         """
@@ -134,4 +135,4 @@ class RobotPositionMessage(DJIMessage):
         Returns:
             bytes: Encoded position data as 3 floats (x, y, z) in little-endian format.
         """
-        return struct.pack("<fff", self.position.x, self.position.y, self.position.z)
+        return struct.pack("<fffB", self.position.x, self.position.y, self.position.z, self.color_id)
