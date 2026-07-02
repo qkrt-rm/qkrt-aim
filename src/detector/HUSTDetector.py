@@ -34,7 +34,7 @@ class HUSTDetector(Detector):
         self.model.run(None, {"images": dummy_input})
 
     def processInput(self, input: MatLike) -> List[Target]:
-        input, scalar_h, scalar_w, x_cutoff = self.formatInput(input)
+        input, scalar_h, scalar_w, x_offset, y_offset = self.formatInput(input)
 
         output = self.model.run(None, {"images": input})
         output = np.array(output)[0][0]
@@ -45,8 +45,8 @@ class HUSTDetector(Detector):
         for target in targets:
             vertices = target.rect.vertices
             for i in range(4):
-                vertices[i].x = vertices[i].x * scalar_w + x_cutoff
-                vertices[i].y = vertices[i].y * scalar_h
+                vertices[i].x = vertices[i].x * scalar_w + x_offset
+                vertices[i].y = vertices[i].y * scalar_h + y_offset
 
         targets = mergeListOfTargets(targets)
 
@@ -54,12 +54,22 @@ class HUSTDetector(Detector):
 
     # Format input to target expected model input of (1, 3, 416, 416)
     def formatInput(self, img: MatLike):
-        # Chop off the sides to make it square
-        x_cutoff = 0
-        if img.shape[1] != img.shape[0]:
-            x_cutoff = img.shape[1] - img.shape[0]
-            x_cutoff = x_cutoff // 2
-            img = img[:, x_cutoff : x_cutoff + img.shape[0]]
+        h, w = img.shape[:2]
+        x_offset = 0
+        y_offset = 0
+
+        if w > h:
+            # Letterbox: pad top/bottom to make square, preserving full width
+            pad_top = (w - h) // 2
+            pad_bottom = w - h - pad_top
+            img = cv2.copyMakeBorder(img, pad_top, pad_bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            y_offset = -pad_top
+        elif h > w:
+            # Letterbox: pad left/right to make square, preserving full height
+            pad_left = (h - w) // 2
+            pad_right = h - w - pad_left
+            img = cv2.copyMakeBorder(img, 0, 0, pad_left, pad_right, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            x_offset = -pad_left
 
         # Resize the image to the input size of the model
         scalar_h = img.shape[0] / self.INPUT_SIZE
@@ -75,7 +85,7 @@ class HUSTDetector(Detector):
         # Convert to float32
         img = img.astype(np.float32)
 
-        return img, scalar_h, scalar_w, x_cutoff
+        return img, scalar_h, scalar_w, x_offset, y_offset
 
     def getTargetsFromOutput(self, values) -> List[Target]:
         targets = []
